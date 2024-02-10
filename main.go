@@ -10,10 +10,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-const modelName = "gemini-pro"
-
 func getApiKey() string {
-	envKey := "GEMINI_APK_KEY"
+	envKey := "GEMINI_API_KEY"
 	apiKey, found := os.LookupEnv(envKey)
 	if !found {
 		log.Fatalf("Environment variable '%v' not set\n", envKey)
@@ -32,11 +30,9 @@ func main() {
 	}
 	defer client.Close()
 
-	// Start conversation with Gemini.
-	converse(ctx, client.GenerativeModel(modelName))
-}
+	// Use Gemini Pro model.
+	model := client.GenerativeModel("gemini-pro")
 
-func converse(ctx context.Context, model *genai.GenerativeModel) {
 	// Configure generation settings.
 	temperature := float32(0.9)
 	topK := int32(1)
@@ -48,6 +44,12 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 		TopK:            &topK,
 		TopP:            &topP,
 		MaxOutputTokens: &maxOutputTokens,
+		StopSequences: []string{
+			`a`,
+			`a\b`,
+			`'a'`,
+			`"a"`,
+		},
 	}
 
 	// Configure safety settings.
@@ -58,21 +60,9 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
 	}
 
-	// Start new chat session.
-	session := model.StartChat()
-
-	// Establish chat history.
-	session.History = []*genai.Content{
-		{Role: "user", Parts: []genai.Part{genai.Text("What is this character? 🥞")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Pancake")}},
-		{Role: "user", Parts: []genai.Part{genai.Text("How about this one? 木")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Tree")}},
-		{Role: "user", Parts: []genai.Part{genai.Text("And this one? 💩")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Pile of Poo")}},
-	}
-
 	// Call the Gemini AI API.
-	resp, err := session.SendMessage(ctx, genai.Text("ευχαριστώ"))
+	parts := genai.Text(`Write a creative\exciting children's bedtime "story"`)
+	resp, err := model.GenerateContent(ctx, parts)
 	if err != nil {
 		log.Fatalf("Error sending message: %v\n", err)
 	}
