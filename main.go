@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -53,30 +54,36 @@ func main() {
 
 	// Configure safety settings.
 	model.SafetySettings = []*genai.SafetySetting{
-		{Category: genai.HarmCategoryHarassment, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryHateSpeech, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategorySexuallyExplicit, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
+		// {Category: genai.HarmCategoryHarassment, Threshold: genai.HarmBlockMediumAndAbove},
+		// {Category: genai.HarmCategoryHateSpeech, Threshold: genai.HarmBlockMediumAndAbove},
+		// {Category: genai.HarmCategorySexuallyExplicit, Threshold: genai.HarmBlockMediumAndAbove},
+		// {Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
 	}
 
 	// Multi-part request.
 	parts := []genai.Part{
-		genai.Text("wut this?\n\n"),
-		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird)),
-		genai.Text(" a birb\n\nand this: "),
 		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlCat)),
+		genai.Text("Tell me a story about this animal"),
 	}
 
 	// Call the Gemini AI API.
-	resp, err := model.GenerateContent(ctx, parts...)
-	if err != nil {
-		log.Fatalf("Error sending message: %v\n", err)
+	it := model.GenerateContentStream(ctx, parts...)
+	for {
+		resp, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Error iterating through response: %v\n", err)
+		}
+
+		// Display the the next part of streamed response.
+		for _, part := range resp.Candidates[0].Content.Parts {
+			fmt.Print(part)
+			fmt.Println()
+		}
 	}
 
-	// Display the response.
-	for _, part := range resp.Candidates[0].Content.Parts {
-		fmt.Printf("%v\n", part)
-	}
 }
 
 func getJpegImageBytes(url string) []byte {
