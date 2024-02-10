@@ -59,16 +59,11 @@ func main() {
 		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
 	}
 
-	// Multi-part request.
-	parts := []genai.Part{
-		genai.Text("wut this?\n\n"),
-		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird)),
-		genai.Text(" a birb\n\nand this: "),
-		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlCat)),
-	}
+	// Image only request.
+	part := genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird))
 
 	// Call the Gemini AI API.
-	resp, err := model.GenerateContent(ctx, parts...)
+	resp, err := model.GenerateContent(ctx, part)
 	if err != nil {
 		log.Fatalf("Error sending message: %v\n", err)
 	}
