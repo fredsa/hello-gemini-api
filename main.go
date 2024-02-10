@@ -30,39 +30,45 @@ func main() {
 	}
 	defer client.Close()
 
-	// Use Gemini Pro model.
-	model := client.GenerativeModel("gemini-pro")
+	// Use PaLM 2 for Text (text-bison) model.
+	model := client.GenerativeModel("text-bison-001")
 
 	// Configure generation settings.
-	temperature := float32(0.9)
-	topK := int32(1)
-	topP := float32(1.0)
-	maxOutputTokens := int32(2048)
+	temperature := float32(0.7)
+	candidateCount := int32(4)
+	topK := int32(40)
+	topP := float32(0.95)
+	maxOutputTokens := int32(1024)
 
 	model.GenerationConfig = genai.GenerationConfig{
 		Temperature:     &temperature,
+		CandidateCount:  &candidateCount,
 		TopK:            &topK,
 		TopP:            &topP,
 		MaxOutputTokens: &maxOutputTokens,
 		StopSequences: []string{
-			`a`,
-			`a\b`,
-			`'a'`,
+			"a",
+			"a\b",
+			"'a'",
 			`"a"`,
 		},
 	}
 
 	// Configure safety settings.
 	model.SafetySettings = []*genai.SafetySetting{
-		{Category: genai.HarmCategoryHarassment, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryHateSpeech, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategorySexuallyExplicit, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
+		{Category: genai.HarmCategoryDerogatory, Threshold: genai.HarmBlockLowAndAbove},
+		{Category: genai.HarmCategoryToxicity, Threshold: genai.HarmBlockLowAndAbove},
+		{Category: genai.HarmCategoryViolence, Threshold: genai.HarmBlockMediumAndAbove},
+		{Category: genai.HarmCategorySexual, Threshold: genai.HarmBlockMediumAndAbove},
+		{Category: genai.HarmCategoryMedical, Threshold: genai.HarmBlockMediumAndAbove},
+		{Category: genai.HarmCategoryDangerous, Threshold: genai.HarmBlockMediumAndAbove},
 	}
 
+	mood := "exciting"
+	prompt := fmt.Sprintf("Write a creative%s children&#39;s bedtime &quot;story&quot;", mood)
+
 	// Call the Gemini AI API.
-	part := genai.Text(`Write a creative\exciting children's bedtime "story"`)
-	resp, err := model.GenerateContent(ctx, part)
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		log.Fatalf("Error sending message: %v\n", err)
 	}
