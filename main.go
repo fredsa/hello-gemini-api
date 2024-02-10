@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -36,54 +35,24 @@ func main() {
 	}
 	defer client.Close()
 
-	// Use Gemini Pro Vision model.
-	model := client.GenerativeModel("gemini-pro-vision")
+	// Use model that can create text embeddings.
+	em := client.EmbeddingModel("embedding-001")
+	prompt := genai.Text("The quick brown fox jumps over the lazy dog.")
 
-	// Configure generation settings.
-	temperature := float32(0.4)
-	topK := int32(32)
-	topP := float32(1.0)
-	maxOutputTokens := int32(4096)
+	// https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-multimodal-embeddings#supported-models
+	// Use model that can create multimodal embeddings.
+	// em := client.EmbeddingModel("multimodalembedding")
+	// prompt := genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird))
 
-	model.GenerationConfig = genai.GenerationConfig{
-		Temperature:     &temperature,
-		TopK:            &topK,
-		TopP:            &topP,
-		MaxOutputTokens: &maxOutputTokens,
+	res, err := em.EmbedContent(ctx, prompt)
+	if err != nil {
+		log.Fatalf("Unable to create embedding: %v\n", err)
 	}
 
-	// Configure safety settings.
-	model.SafetySettings = []*genai.SafetySetting{
-		// {Category: genai.HarmCategoryHarassment, Threshold: genai.HarmBlockMediumAndAbove},
-		// {Category: genai.HarmCategoryHateSpeech, Threshold: genai.HarmBlockMediumAndAbove},
-		// {Category: genai.HarmCategorySexuallyExplicit, Threshold: genai.HarmBlockMediumAndAbove},
-		// {Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
-	}
-
-	// Multi-part request.
-	parts := []genai.Part{
-		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlCat)),
-		genai.Text("Tell me a story about this animal"),
-	}
-
-	// Call the Gemini AI API.
-	it := model.GenerateContentStream(ctx, parts...)
-	for {
-		resp, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatalf("Error iterating through response: %v\n", err)
-		}
-
-		// Display the the next part of streamed response.
-		for _, part := range resp.Candidates[0].Content.Parts {
-			fmt.Print(part)
-			fmt.Println()
-		}
-	}
-
+	values := res.Embedding.Values
+	fmt.Printf("Embedding dimension: %v\n", len(values))
+	fmt.Printf("Embedding values: %v, %v, ...\n", values[0], values[1])
+	// fmt.Println(res.Embedding.Values)
 }
 
 func getJpegImageBytes(url string) []byte {
