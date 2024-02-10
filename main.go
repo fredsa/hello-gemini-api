@@ -48,6 +48,7 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 		TopK:            &topK,
 		TopP:            &topP,
 		MaxOutputTokens: &maxOutputTokens,
+		StopSequences:   []string{`🎉`},
 	}
 
 	// Configure safety settings.
@@ -58,21 +59,18 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
 	}
 
-	// Start new chat session.
-	session := model.StartChat()
-
-	// Establish chat history.
-	session.History = []*genai.Content{
-		{Role: "user", Parts: []genai.Part{genai.Text("What is this character? 🥞")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Pancake")}},
-		{Role: "user", Parts: []genai.Part{genai.Text("How about this one? 木")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Tree")}},
-		{Role: "user", Parts: []genai.Part{genai.Text("And this one? 💩")}},
-		{Role: "model", Parts: []genai.Part{genai.Text("Pile of Poo")}},
+	// Multi-part request.
+	parts := []genai.Part{
+		genai.Text("Describe the character"),
+		genai.Text("char: 🥞"),
+		genai.Text("description: pancakes emoji"),
+		genai.Text("char: 木"),
+		genai.Text("description: Mandarin character mù"),
+		genai.Text("char: 💩"),
+		genai.Text("description: "),
 	}
-
 	// Call the Gemini AI API.
-	resp, err := session.SendMessage(ctx, genai.Text("ευχαριστώ"))
+	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
 		log.Fatalf("Error sending message: %v\n", err)
 	}
