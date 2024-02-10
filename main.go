@@ -35,24 +35,37 @@ func main() {
 	}
 	defer client.Close()
 
-	// Use model that can create text embeddings.
-	em := client.EmbeddingModel("embedding-001")
-	prompt := genai.Text("The quick brown fox jumps over the lazy dog.")
+	// // For text-only input, use the Gemini Pro model.
+	// model := client.GenerativeModel("gemini-pro")
 
-	// https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-multimodal-embeddings#supported-models
-	// Use model that can create multimodal embeddings.
-	// em := client.EmbeddingModel("multimodalembedding")
-	// prompt := genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird))
+	// text := "Parrots can be green and live a long time."
+	// res, err := model.CountTokens(ctx, genai.Text(text))
+	// if err != nil {
+	// 	log.Fatalf("Unable to count tokens: %v\n", err)
+	// }
 
-	res, err := em.EmbedContent(ctx, prompt)
-	if err != nil {
-		log.Fatalf("Unable to create embedding: %v\n", err)
+	// fmt.Printf("Input text (%v bytes): %v\n", len(text), text)
+	// fmt.Printf("Total tokens: %v\n", res.TotalTokens)
+
+	// For text-and-image input (multimodal), use the Gemini Pro Vision model.
+	model := client.GenerativeModel("gemini-pro-vision")
+
+	text := "Parrots can be green and live a long time."
+	imageBytes := getJpegImageBytes(string(jpegUrlBird))
+
+	parts := []genai.Part{
+		genai.Text(text),
+		genai.ImageData("jpeg", imageBytes),
 	}
 
-	values := res.Embedding.Values
-	fmt.Printf("Embedding dimension: %v\n", len(values))
-	fmt.Printf("Embedding values: %v, %v, ...\n", values[0], values[1])
-	// fmt.Println(res.Embedding.Values)
+	res, err := model.CountTokens(ctx, parts...)
+	if err != nil {
+		log.Fatalf("Unable to count tokens: %v\n", err)
+	}
+
+	fmt.Printf("Input text (%v bytes): %v\n", len(text), text)
+	fmt.Printf("Input image (%v bytes): %v\n", len(imageBytes), jpegUrlBird)
+	fmt.Printf("Total: %v bytes, %v tokens\n", len(text)+len(imageBytes), res.TotalTokens)
 }
 
 func getJpegImageBytes(url string) []byte {
