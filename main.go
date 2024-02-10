@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 )
 
-const modelName = "gemini-pro"
+const jpegUrlBird = "https://t2.gstatic.com/licensed-image?q=tbn:ANd9GcRYL5x5KonnTYgeE-C-s09bBKuupEp0F0VsPYKNwpW6Xp-TFfoZ_iTporuLNOBWwm6HhOoek5cF"
+const jpegUrlCat = "https://t0.gstatic.com/licensed-image?q=tbn:ANd9GcRbNuiexLb-Bsa2FR_HX5wRzIfI79zoNJk1F0kjbPvQ0O_MK3T-xobhQjN4fbYwDBa-RNdCx36t"
 
 func getApiKey() string {
 	envKey := "GEMINI_API_KEY"
@@ -32,23 +35,20 @@ func main() {
 	}
 	defer client.Close()
 
-	// Start conversation with Gemini.
-	converse(ctx, client.GenerativeModel(modelName))
-}
+	// Use Gemini Pro Vision model.
+	model := client.GenerativeModel("gemini-pro-vision")
 
-func converse(ctx context.Context, model *genai.GenerativeModel) {
 	// Configure generation settings.
-	temperature := float32(0.9)
-	topK := int32(1)
+	temperature := float32(0.4)
+	topK := int32(32)
 	topP := float32(1.0)
-	maxOutputTokens := int32(2048)
+	maxOutputTokens := int32(4096)
 
 	model.GenerationConfig = genai.GenerationConfig{
 		Temperature:     &temperature,
 		TopK:            &topK,
 		TopP:            &topP,
 		MaxOutputTokens: &maxOutputTokens,
-		StopSequences:   []string{`🎉`},
 	}
 
 	// Configure safety settings.
@@ -61,14 +61,15 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 
 	// Multi-part request.
 	parts := []genai.Part{
-		genai.Text("Describe the character"),
-		genai.Text("char: 🥞"),
-		genai.Text("description: pancakes emoji"),
-		genai.Text("char: 木"),
-		genai.Text("description: Mandarin character mù"),
-		genai.Text("char: 💩"),
-		genai.Text("description: "),
+		genai.Text(" wut this?"),
+		genai.Text("The Pic: this one: "),
+		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlBird)),
+		genai.Text("What Is: a birb"),
+		genai.Text("The Pic: and this: "),
+		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlCat)),
+		genai.Text("What Is: "),
 	}
+
 	// Call the Gemini AI API.
 	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
@@ -79,4 +80,18 @@ func converse(ctx context.Context, model *genai.GenerativeModel) {
 	for _, part := range resp.Candidates[0].Content.Parts {
 		fmt.Printf("%v\n", part)
 	}
+}
+
+func getJpegImageBytes(url string) []byte {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Error fetching image %v: %v\n", url, err)
+	}
+	defer resp.Body.Close()
+
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading image bytes %v: %v\n", url, err)
+	}
+	return bytes
 }
