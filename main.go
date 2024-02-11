@@ -34,17 +34,10 @@ func main() {
 	model := client.GenerativeModel("gemini-pro")
 
 	// Configure generation settings.
-	temperature := float32(0.9)
-	topK := int32(1)
-	topP := float32(1.0)
-	maxOutputTokens := int32(2048)
-
-	model.GenerationConfig = genai.GenerationConfig{
-		Temperature:     &temperature,
-		TopK:            &topK,
-		TopP:            &topP,
-		MaxOutputTokens: &maxOutputTokens,
-	}
+	model.SetTemperature(0.9)
+	model.SetTopK(1)
+	model.SetTopP(1.0)
+	model.SetMaxOutputTokens(2048)
 
 	// Configure safety settings.
 	model.SafetySettings = []*genai.SafetySetting{
