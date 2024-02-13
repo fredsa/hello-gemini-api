@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +11,9 @@ import (
 	"google.golang.org/api/option"
 )
 
+// Get API key from environment variable.
 func getApiKey() string {
-	envKey := "GEMINI_API_KEY"
+	envKey := "API_KEY"
 	apiKey, found := os.LookupEnv(envKey)
 	if !found {
 		log.Fatalf("Environment variable '%v' not set\n", envKey)
@@ -23,45 +25,43 @@ func main() {
 	ctx := context.Background()
 
 	// New client, using API key authorization.
-	option := option.WithAPIKey(getApiKey())
-	client, err := genai.NewClient(ctx, option)
+	client, err := genai.NewClient(ctx, option.WithAPIKey(getApiKey()))
 	if err != nil {
-		log.Fatalf("Error creating client: %v\n", err)
+		log.Fatal(err)
 	}
 	defer client.Close()
 
-	// Use Gemini Pro model.
-	model := client.GenerativeModel("gemini-pro")
+	// Use Gemini Pro Vision model.
+	model := client.GenerativeModel("gemini-pro-vision")
 
-	// Configure generation settings.
-	model.SetTemperature(0.9)
-	model.SetTopK(1)
-	model.SetTopP(1.0)
-	model.SetMaxOutputTokens(2048)
-	model.StopSequences = []string{
-		"a",
-		"a\b",
-		"'a'",
-		`"a"`,
+	// Multi-part prompt.
+	prompt := []genai.Part{
+		// TODO: Provide input image, update description to match the image.
+		genai.Text("Screenshot: "),
+		genai.ImageData("png", getBytes("astrohorse.png")),
+		genai.Text("\nDescription: an astronaut riding a horse\n\nScreenshot: "),
+
+		// TODO: Provide second image for which a description is desired.
+		genai.ImageData("png", getBytes("camel.png")),
+		genai.Text("\nDescription:"),
 	}
 
-	// Configure safety settings.
-	model.SafetySettings = []*genai.SafetySetting{
-		{Category: genai.HarmCategoryHarassment, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryHateSpeech, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategorySexuallyExplicit, Threshold: genai.HarmBlockMediumAndAbove},
-		{Category: genai.HarmCategoryDangerousContent, Threshold: genai.HarmBlockMediumAndAbove},
-	}
-
-	// Call the Gemini AI API.
-	part := genai.Text(`Write a creative\exciting children's bedtime "story"`)
-	resp, err := model.GenerateContent(ctx, part)
+	// Invoke API to generate response.
+	resp, err := model.GenerateContent(ctx, prompt...)
 	if err != nil {
-		log.Fatalf("Error sending message: %v\n", err)
+		log.Fatal(err)
 	}
 
-	// Display the response.
-	for _, part := range resp.Candidates[0].Content.Parts {
-		fmt.Printf("%v\n", part)
+	// Display the response as formatted JSON output.
+	bs, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(bs))
+}
+
+// Get file contents as bytes.
+func getBytes(path string) []byte {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("Error reading file %v: %v\n", path, err)
 	}
+	return bytes
 }
