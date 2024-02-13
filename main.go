@@ -31,37 +31,26 @@ func main() {
 	}
 	defer client.Close()
 
-	// Use Gemini Pro Vision model.
-	model := client.GenerativeModel("gemini-pro-vision")
+	// For text-only input, use the Gemini Pro model.
+	model := client.GenerativeModel("gemini-pro")
 
-	// Multi-part prompt.
-	prompt := []genai.Part{
-		// TODO: Provide input image, update description to match the image.
-		genai.Text("Screenshot: "),
-		genai.ImageData("png", getBytes("astrohorse.png")),
-		genai.Text("\nDescription: an astronaut riding a horse\n\nScreenshot: "),
+	// Establish chat history.
+	session := model.StartChat()
+	session.History = []*genai.Content{{
+		Parts: []genai.Part{genai.Text("Hello, I have 2 dogs in my house.")},
+		Role:  "user",
+	}, {
+		Parts: []genai.Part{genai.Text("Great to meet you. What would you like to know?")},
+		Role:  "model",
+	}}
 
-		// TODO: Provide second image for which a description is desired.
-		genai.ImageData("png", getBytes("camel.png")),
-		genai.Text("\nDescription:"),
-	}
-
-	// Invoke API to generate response.
-	resp, err := model.GenerateContent(ctx, prompt...)
+	// Send next message in chat and generate response.
+	resp, err := session.SendMessage(ctx, genai.Text("How many paws are in my house?"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Display the response as formatted JSON output.
-	bs, _ := json.MarshalIndent(resp, "", "  ")
-	fmt.Println(string(bs))
-}
-
-// Get file contents as bytes.
-func getBytes(path string) []byte {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("Error reading file %v: %v\n", path, err)
-	}
-	return bytes
+	b, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(b))
 }
