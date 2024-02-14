@@ -16,8 +16,8 @@ import (
 const jpegUrlBird = "https://t2.gstatic.com/licensed-image?q=tbn:ANd9GcRYL5x5KonnTYgeE-C-s09bBKuupEp0F0VsPYKNwpW6Xp-TFfoZ_iTporuLNOBWwm6HhOoek5cF"
 const jpegUrlCat = "https://t0.gstatic.com/licensed-image?q=tbn:ANd9GcRbNuiexLb-Bsa2FR_HX5wRzIfI79zoNJk1F0kjbPvQ0O_MK3T-xobhQjN4fbYwDBa-RNdCx36t"
 
-func getApiKey() string {
-	envKey := "GEMINI_API_KEY"
+func getAPIKey() string {
+	envKey := "API_KEY"
 	apiKey, found := os.LookupEnv(envKey)
 	if !found {
 		log.Fatalf("Environment variable '%v' not set\n", envKey)
@@ -29,7 +29,7 @@ func main() {
 	ctx := context.Background()
 
 	// New client, using API key authorization.
-	option := option.WithAPIKey(getApiKey())
+	option := option.WithAPIKey(getAPIKey())
 	client, err := genai.NewClient(ctx, option)
 	if err != nil {
 		log.Fatalf("Error creating client: %v\n", err)
@@ -62,7 +62,7 @@ func main() {
 
 	// Multi-part request.
 	parts := []genai.Part{
-		genai.ImageData("jpeg", getJpegImageBytes(jpegUrlCat)),
+		genai.ImageData("jpeg", getBytes(jpegUrlCat)),
 		genai.Text("Tell me a story about this animal"),
 	}
 
@@ -83,10 +83,9 @@ func main() {
 			fmt.Println()
 		}
 	}
-
 }
 
-func getJpegImageBytes(url string) []byte {
+func getBytes(url string) []byte {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Error fetching image %v: %v\n", url, err)
